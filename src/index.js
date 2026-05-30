@@ -34,7 +34,7 @@ import express from "express";
 
 const app = express();
 
-(async ()=>{
+;(async ()=>{
     try {
         await mongoose.connect(`${process.env.MONGO_URI}/${DB_NAME}`);
         app.on("error",(error)=>{
@@ -49,6 +49,6 @@ const app = express();
         console.error("Error ",error);
         throw error;
     }
-})()
+})() //iife
 
 */
