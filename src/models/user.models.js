@@ -1,7 +1,10 @@
 import mongoose,{Schema} from "mongoose";
-import { JsonWebTokenError } from "jsonwebtoken";
+// import { JsonWebTokenError } from "jsonwebtoken";
 import bcrypt from 'bcrypt';
 import { configDotenv } from "dotenv";
+import pkg from "jsonwebtoken";
+
+const { JsonWebTokenError } = pkg;
 //jwt is a bearer token means like a key whoever send this to me i will send data to them
 
 const userSchema =new Schema({
@@ -39,7 +42,7 @@ const userSchema =new Schema({
             ref:"video"
         }
     ],
-    passwords:{
+    password:{
         type:String,
         required:[true,'Password is Required']
     },
@@ -50,12 +53,10 @@ const userSchema =new Schema({
     timestamps:true
 })
 
-userSchema.pre("save",async function (next) {
-    if(!this.isModified("password")){
-        return next;
-    }
-    this .password =await bcrypt.hash(this.password,10)
-    next()
+userSchema.pre("save", async function() {
+    if (!this.isModified("password")) return;
+
+    this.password = await bcrypt.hash(this.password, 10);
 })
 
 userSchema.methods.isPasswordCorrect = async function (password){
