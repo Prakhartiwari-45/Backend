@@ -1,109 +1,125 @@
-import mongoose,{Schema} from "mongoose";
+import mongoose, { Schema } from "mongoose";
 // import { JsonWebTokenError } from "jsonwebtoken";
-import bcrypt from 'bcrypt';
+import bcrypt from "bcrypt";
 import { configDotenv } from "dotenv";
 import jwt from "jsonwebtoken";
 //jwt is a bearer token means like a key whoever send this to me i will send data to them
 
-const userSchema =new Schema({
-    username:{
-        type:String,
-        required:true,
-        unique:true,
-        lowercase:true,
-        trim:true,
-        index:true
+// Define the User Schema - structure of user documents in MongoDB
+const userSchema = new Schema(
+  {
+    // USERNAME: Unique identifier for each user
+    username: {
+      type: String,
+      required: true, // Must be provided
+      unique: true, // No two users can have same username
+      lowercase: true, // Auto-convert to lowercase
+      trim: true, // Remove extra whitespace
+      index: true, // Create index for faster queries
     },
-    email:{
-        type:String,
-        required:true,
-        unique:true,
-        lowercase:true,
-        trim:true
+    // EMAIL: User's email address
+    email: {
+      type: String,
+      required: true, // Email must be provided
+      unique: true, // Each email can only be used once
+      lowercase: true, // Store in lowercase
+      trim: true, // Remove extra whitespace
     },
-    fullname:{
-        type:String,
-        required:true,
-        trim:true,
-        index:true
+    // FULLNAME: User's complete name
+    fullname: {
+      type: String,
+      required: true, // Must be provided
+      trim: true, // Remove extra whitespace
+      index: true, // Index for faster search
     },
-    avatar:{
-        type:String,//cloudinary url
-        required:true,
+    // AVATAR: User's profile picture URL from Cloudinary
+    avatar: {
+      type: String, // URL string from Cloudinary
+      required: true, // Profile picture is mandatory
     },
-    coverImage:{
-        type:String,//cloudinary url
+    // COVERIMAGE: User's banner/cover image URL (optional)
+    coverImage: {
+      type: String, // URL string from Cloudinary
     },
-    watchHistory:[
-        {
-            type:Schema.Types.ObjectId,
-            ref:"video"
-        }
+    // WATCHHISTORY: Array of video IDs user has watched
+    watchHistory: [
+      {
+        type: Schema.Types.ObjectId, // Reference to Video document
+        ref: "video", // Populate from "video" collection
+      },
     ],
-    password:{
-        type:String,
-        required:[true,'Password is Required']
+    // PASSWORD: User's password (will be hashed before storage)
+    password: {
+      type: String,
+      required: [true, "Password is Required"], // Custom error message
     },
-    refreshToken:{
-        type:String
-    }
-},{
-    timestamps:true
-})
-
-userSchema.pre("save", async function() {
-    if (!this.isModified("password")) return;
-
-    this.password = await bcrypt.hash(this.password, 10);
-})
-
-userSchema.methods.isPasswordCorrect = async function (password){
-    return await bcrypt.compare(password,this.password);
-}
-
-userSchema.methods.generateAccessToken = function (){
-    return jwt.sign({
-        _id: this._id,
-        email:this.email,
-        username:this.username,
-        fullname:this.fullname
+    // REFRESHTOKEN: Stored when user logs in (optional, for re-authentication)
+    refreshToken: {
+      type: String,
     },
-    process.env.ACCESS_TOKEN_SECRET,
+  },
+  {
+    // TIMESTAMPS: Auto-add createdAt and updatedAt fields
+    timestamps: true,
+  }
+);
+
+// MIDDLEWARE: Hash password before saving to database
+// Runs automatically whenever a user document is saved
+userSchema.pre("save", async function () {
+  // Only hash if password field is modified (new user or password change)
+  if (!this.isModified("password")) return next;
+
+  // Hash password with bcrypt using salt rounds of 10
+  // This makes password irreversible and secure
+  this.password = await bcrypt.hash(this.password, 10);
+});
+
+// CUSTOM METHOD: Compare entered password with stored hashed password
+// Used during login to verify user credentials
+userSchema.methods.isPasswordCorrect = async function (password) {
+  // bcrypt.compare returns true if passwords match, false otherwise
+  return await bcrypt.compare(password, this.password);
+};
+
+// CUSTOM METHOD: Generate JWT Access Token for user
+// Access token has short expiry and is sent with every API request
+userSchema.methods.generateAccessToken = function () {
+  return jwt.sign(
     {
-        expiresIn:process.env.ACCESS_TOKEN_EXPIRY
-    }
-)
-}
-
-userSchema.methods.generateRefreshToken = function (){
-    return jwt.sign({
-        _id: this._id
+      // Payload: data encoded in the token
+      _id: this._id,
+      email: this.email,
+      username: this.username,
+      fullname: this.fullname,
     },
-    process.env.REFRESH_TOKEN_SECRET,
+    process.env.ACCESS_TOKEN_SECRET, // Secret key to sign token
     {
-        expiresIn:process.env.REFRESH_TOKEN_EXPIRY
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY, // Token validity duration
     }
-)
-}
+  );
+};
 
+// CUSTOM METHOD: Generate JWT Refresh Token for user
+// Refresh token has longer expiry and is used to generate new access tokens
+userSchema.methods.generateRefreshToken = function () {
+  return jwt.sign(
+    {
+      // Payload: only include user ID (minimal data)
+      _id: this._id,
+    },
+    process.env.REFRESH_TOKEN_SECRET, // Secret key to sign token
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY, // Longer validity duration
+    }
+  );
+};
 
-
-
-export const User=mongoose.model("User",userSchema)
-
-
-
-
-
-
-
-
-
+// Export User model for use in other files
+// Mongoose converts schema into a model with built-in CRUD methods
+export const User = mongoose.model("User", userSchema);
 
 // Explanation
-
-
-
 
 // // Import mongoose and Schema
 // // mongoose => Used to connect and interact with MongoDB

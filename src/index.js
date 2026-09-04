@@ -34,12 +34,13 @@ connectDB()
 
 /*
 import express from "express";
-
+import mongoose from "mongoose";
+import { DB_NAME } from "../constants.js";
 const app = express();
 
 ;(async ()=>{
     try {
-        await mongoose.connect(`${process.env.MONGO_URI}/${DB_NAME}`);
+        await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`);
         app.on("error",(error)=>{
             console.error("Error in connecting to database");
             throw error;
